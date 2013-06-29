@@ -16,6 +16,7 @@
 <script>
 var w;
 
+
 var db = JSRel.use("dbname", 
   {
     schema: {
@@ -52,8 +53,8 @@ var Word = Backbone.Model.extend({
     parent.save();
     db.ins('word_rels', {parent_id: parent.get("id"), child_id: this.get("id")});
   },
-  findAll: function(){
-    return new Words(db.find('words'))
+  findAll: function(title){
+    return new Words(db.find('words', {title: {gt: title}}, {order:"title", limit:30}))
   }
 });
 
@@ -65,7 +66,8 @@ var WordView = Backbone.View.extend({
   tagName: "div",
   render: function(){
     var title = this.model.get("title");
-    this.$el.html(title);
+    var href = $('<a></a>').text(title).attr("href", "/"+title);
+    this.$el.html(href);
     return this;
   }
 });
@@ -108,37 +110,41 @@ var addWordView = Backbone.View.extend({
 
 var Router = Backbone.Router.extend({
   routes: {
-    "words/:title": "words"
+    "": "words",
+    ":title": "words"
   },
-  words: function(){
-    c("hoge");
+  words: function(title){
+    if(!title){
+      title = "Internet";
+    }
+    c(title);
+    words = new Word().findAll(title);
+    new WordsView({
+      collection: words
+    }).render();
+
+    new addWordView({
+      collection: words
+    }).render();
+
+    $("#input").focus();
   }
 });
 
 var router = new Router();
 
-router.on("route:words", function(){
-  c("kekeke");
-});
-
 w = new Word().create("Shinran");
 w.addParent("Shigesato_Itoi");
 
-w = new Word().create("Internet");
-
-var words = new Word().findAll();
-
-new WordsView({
-  collection: words
-}).render();
-
-new addWordView({
-  collection: words
-}).render();
-
-
-$("#input").focus();
-
+<?php
+/*
+var mindia_words = <?php echo file_get_contents("http://mindia.jp/?module=book_keyword_json&book=nishiko"); ?>;
+for(var i=0; i < mindia_words.length; i++){
+  new Word().create(mindia_words[i]);
+}
+*/
+?>
+db.save();
 Backbone.history.start({ pushState: true});
 
 </script>
