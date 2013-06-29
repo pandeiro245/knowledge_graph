@@ -14,12 +14,14 @@
 </form>
 
 <script>
+var w;
+
 var db = JSRel.use("dbname", 
   {
     schema: {
-      users: { name : "", $uniques: "name"},
-      words: { title : "", body: "", $uniques: "title"},
-      word_rels: { parent_id : 0, child_id: 0}
+      users: { name : "", server_id: 0, $uniques: "name"},
+      words: { title : "", body: "", server_id: 0, $uniques: "title"},
+      word_rels: { parent_id : 0, child_id: 0, user_id:0, server_id: 0}
     }
   }
 );
@@ -29,6 +31,11 @@ function c(val){
 }
 
 var Word = Backbone.Model.extend({
+  create: function(title){
+    this.set("title", title);
+    this.save();
+    return this;
+  },
   save: function(){
     var title = this.get("title");
     var word = db.one('words', {title: title});
@@ -44,6 +51,9 @@ var Word = Backbone.Model.extend({
     parent.set("title", title);
     parent.save();
     db.ins('word_rels', {parent_id: parent.get("id"), child_id: this.get("id")});
+  },
+  findAll: function(){
+    return new Words(db.find('words'))
   }
 });
 
@@ -96,7 +106,7 @@ var addWordView = Backbone.View.extend({
   }
 });
 
-var WorkSpace = Backbone.Router.extend({
+var Router = Backbone.Router.extend({
   routes: {
     "words/:title": "words"
   },
@@ -105,19 +115,18 @@ var WorkSpace = Backbone.Router.extend({
   }
 });
 
-var workSpace = new WorkSpace();
+var router = new Router();
 
-workSpace.on("workSpace:words", function(){
+router.on("route:words", function(){
   c("kekeke");
 });
 
-var w1 = new Word();
-w1.set("title", '親鸞');
-w1.save();
+w = new Word().create("Shinran");
+w.addParent("Shigesato_Itoi");
 
-w1.addParent("糸井重里");
+w = new Word().create("Internet");
 
-var words = new Words(db.find('words'));
+var words = new Word().findAll();
 
 new WordsView({
   collection: words
@@ -127,5 +136,9 @@ new addWordView({
   collection: words
 }).render();
 
+
 $("#input").focus();
+
+Backbone.history.start({ pushState: true});
+
 </script>
