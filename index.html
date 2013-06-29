@@ -1,0 +1,131 @@
+<html>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min.js"></script>
+<script type="text/javascript" src="http://timecard.mindia.jp/js/SortedList.js"></script>
+<script type="text/javascript" src="http://timecard.mindia.jp/js/jsrel.js"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>mindia</title>
+<body>
+<div id="words">now loading...</div>
+<form id="add_word">
+<input type="text" id="input" />
+<input type="submit" value="add" />
+</form>
+
+<script>
+var db = JSRel.use("dbname", 
+  {
+    schema: {
+      users: { name : "", $uniques: "name"},
+      words: { title : "", body: "", $uniques: "title"},
+      word_rels: { parent_id : 0, child_id: 0}
+    }
+  }
+);
+
+function c(val){
+  console.log(val);
+}
+
+var Word = Backbone.Model.extend({
+  save: function(){
+    var title = this.get("title");
+    var word = db.one('words', {title: title});
+    if(!word){
+      var word = db.ins('words', {title: title});
+    }else{
+      db.upd("words", word);
+    }
+    this.set("id", word.id);
+  },
+  addParent: function(title){
+    var parent = new Word();
+    parent.set("title", title);
+    parent.save();
+    db.ins('word_rels', {parent_id: parent.get("id"), child_id: this.get("id")});
+  }
+});
+
+var Words = Backbone.Collection.extend({
+  model: Word
+});
+
+var WordView = Backbone.View.extend({
+  tagName: "div",
+  render: function(){
+    var title = this.model.get("title");
+    this.$el.html(title);
+    return this;
+  }
+});
+
+var WordsView = Backbone.View.extend({
+  el: "#words",
+  initialize: function(){
+    this.collection.on("add" ,this.addWord, this);
+  },
+  addWord: function(word){
+    var wordView = new WordView({model: word});
+    this.$el.append(wordView.render().el);
+    $("#input").val("").focus();
+  },
+  render: function(){
+    this.$el.html("");
+    this.collection.each(function(word){
+      var wordView = new WordView({model: word});
+      this.$el.append(wordView.render().el);
+    }, this);
+    return this;
+  }
+});
+
+var addWordView = Backbone.View.extend({
+  el: "#add_word",
+  events: {
+    "submit": "submit"
+  },
+  submit: function(e){
+    e.preventDefault();
+    title = $(e.target).find("#input").val();
+    var word = new Word();
+    if (word.set({title: title}, {validate: true})) {
+      word.save();
+      this.collection.add(word);
+    }
+  }
+});
+
+var WorkSpace = Backbone.Router.extend({
+  routes: {
+    "words/:title": "words"
+  },
+  words: function(){
+    c("hoge");
+  }
+});
+
+var workSpace = new WorkSpace();
+
+workSpace.on("workSpace:words", function(){
+  c("kekeke");
+});
+
+var w1 = new Word();
+w1.set("title", '親鸞');
+w1.save();
+
+w1.addParent("糸井重里");
+
+var words = new Words(db.find('words'));
+
+new WordsView({
+  collection: words
+}).render();
+
+new addWordView({
+  collection: words
+}).render();
+
+$("#input").focus();
+</script>
